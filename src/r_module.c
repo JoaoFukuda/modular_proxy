@@ -2,9 +2,10 @@
 
 buffer_t runThroughInbound(buffer_t buffer)
 {
-	moduleListNode *aux = module_list.head->next;
+	moduleNode *aux = modules_head.next;
 	while (aux) {
 		buffer = aux->module->inbound(buffer);
+		aux = aux->next;
 	}
 
 	return buffer;
@@ -12,9 +13,10 @@ buffer_t runThroughInbound(buffer_t buffer)
 
 buffer_t runThroughOutbound(buffer_t buffer)
 {
-	moduleListNode *aux = module_list.head->next;
+	moduleNode *aux = modules_head.next;
 	while (aux) {
 		buffer = aux->module->outbound(buffer);
+		aux = aux->next;
 	}
 
 	return buffer;

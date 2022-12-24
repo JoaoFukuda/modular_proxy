@@ -7,6 +7,7 @@
 bool initMonitor(const char *modules_dir);
 
 // Load or unload modules based on events from the configured directory
-void runMonitoring();
+void runMonitor();
+void destroyMonitor();
 
 #endif

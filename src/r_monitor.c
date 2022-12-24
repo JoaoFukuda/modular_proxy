@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <malloc.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +15,8 @@
 
 int inotify_fd;
 int watch_fd;
+
+pthread_t monitor_loop_thread;
 
 bool handleEvent()
 {
@@ -55,7 +58,7 @@ bool handleEvent()
 bool initMonitor(const char *dirname)
 {
 	int dirname_len = strlen(dirname);
-	modules_dir = (char *)malloc(dirname_len);
+	modules_dir = (char *)calloc(sizeof(char), dirname_len + 1);
 	strncpy((char *)modules_dir, dirname, dirname_len);
 
 	if (modules_dir[strlen(modules_dir) - 1] == '/') {
@@ -79,7 +82,7 @@ bool initMonitor(const char *dirname)
 	return true;
 }
 
-void runMonitoring()
+void *monitorLoop(void *ptr)
 {
 	bool running = true;
 
@@ -98,7 +101,7 @@ void runMonitoring()
 			if (getline(&line, &line_len, stdin) == -1) {
 				free(line);
 				fprintf(stderr, "Error: %s\n", strerror(errno));
-				return;
+				pthread_exit(ptr);
 			}
 
 			if (line[0] == 'q') {
@@ -113,6 +116,19 @@ void runMonitoring()
 			}
 		}
 	}
+
+	pthread_exit(ptr);
+}
+
+void runMonitor()
+{
+	pthread_create(&monitor_loop_thread, NULL, monitorLoop, NULL);
+	pthread_join(monitor_loop_thread, NULL);
+}
+
+void destroyMonitor()
+{
+	freeModuleList();
 
 	close(inotify_fd);
 	free((void *)modules_dir);

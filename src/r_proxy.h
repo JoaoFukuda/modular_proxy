@@ -3,9 +3,10 @@
 
 #include <stdbool.h>
 
-bool initProxy(const char *inboundAddress, unsigned short inboundPort,
-               const char *outboundAddress, unsigned short outboundPort);
+bool initProxy(const char *inboundAddress, const char *inboundPort,
+               const char *outboundAddress, const char *outboundPort);
 
 void runProxy();
+void destroyProxy();
 
 #endif

@@ -7,7 +7,7 @@
 
 const char *modules_dir;
 
-moduleList module_list;
+moduleNode modules_head;
 
 char *getModulePath(const char *filename)
 {
@@ -27,26 +27,21 @@ bool parseModule(module *module, const char *filepath)
 {
 	module->filepath = strdup(filepath);
 
-	module->handler = dlopen(module->filepath, RTLD_NOW);
+	module->handler =
+	    dlopen(module->filepath, RTLD_NOW | RTLD_LOCAL | RTLD_NODELETE);
 	if (!module->handler) {
-		fprintf(stderr, "Error: Failed opening %s\n", module->filepath);
+		fprintf(stderr, "Error: Failed opening %s, %s\n", module->filepath,
+		        dlerror());
 		free(module->filepath);
 		return false;
 	}
 
 	int (*getPriority)(void) = (int (*)(void))dlsym(module->handler, "priority");
-	if (!getPriority) {
-		fprintf(stderr, "Error: Failed getting priority from %s\n",
-		        module->filepath);
-		dlclose(module->handler);
-		free(module->filepath);
-		return false;
-	}
-	module->priority = getPriority();
+	module->priority = getPriority ? getPriority() : 10;
 
 	module->inbound = (buffer_t(*)(buffer_t))dlsym(module->handler, "inbound");
 	if (!getPriority) {
-		fprintf(stderr, "Error: Failed getting inbound from %s\n",
+		fprintf(stderr, "Error: Failed getting inbound function from %s\n",
 		        module->filepath);
 		dlclose(module->handler);
 		free(module->filepath);
@@ -55,7 +50,7 @@ bool parseModule(module *module, const char *filepath)
 
 	module->outbound = (buffer_t(*)(buffer_t))dlsym(module->handler, "outbound");
 	if (!getPriority) {
-		fprintf(stderr, "Error: Failed getting outbound from %s\n",
+		fprintf(stderr, "Error: Failed getting outbound function from %s\n",
 		        module->filepath);
 		dlclose(module->handler);
 		free(module->filepath);
@@ -63,11 +58,6 @@ bool parseModule(module *module, const char *filepath)
 	}
 
 	return true;
-}
-
-void initModuleList()
-{
-	module_list.head = (moduleListNode *)calloc(sizeof(moduleListNode), 1);
 }
 
 bool loadModule(const char *filename)
@@ -91,11 +81,10 @@ bool loadModule(const char *filename)
 	       new_module->filepath, new_module->priority,
 	       (void *)new_module->inbound, (void *)new_module->outbound);
 
-	moduleListNode *new_node =
-	    (moduleListNode *)calloc(sizeof(moduleListNode), 1);
+	moduleNode *new_node = (moduleNode *)calloc(sizeof(moduleNode), 1);
 	new_node->module = new_module;
 
-	moduleListNode *aux = module_list.head;
+	moduleNode *aux = &modules_head;
 	while (aux->next && new_module->priority < aux->next->module->priority) {
 		aux = aux->next;
 	}
@@ -111,8 +100,7 @@ bool unloadModule(const char *filename)
 {
 	char *filepath = getModulePath(filename);
 
-	moduleListNode *old_module_node = module_list.head->next,
-	               *prev = module_list.head;
+	moduleNode *old_module_node = modules_head.next, *prev = &modules_head;
 	while (old_module_node &&
 	       strcmp(old_module_node->module->filepath, filepath)) {
 		prev = old_module_node;
@@ -139,4 +127,16 @@ bool unloadModule(const char *filename)
 
 	free(filepath);
 	return true;
+}
+
+void freeModuleList()
+{
+	while (modules_head.next) {
+		moduleNode *aux = modules_head.next;
+		modules_head.next = aux->next;
+		dlclose(aux->module->handler);
+		free(aux->module->filepath);
+		free(aux->module);
+		free(aux);
+	}
 }

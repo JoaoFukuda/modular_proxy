@@ -7,7 +7,7 @@
 
 typedef struct {
 	size_t size;
-	uint8_t *data;
+	const uint8_t *data;
 } buffer_t;
 
 typedef struct {
@@ -22,17 +22,13 @@ typedef struct {
 typedef struct aux {
 	module *module;
 	struct aux *next;
-} moduleListNode;
-
-typedef struct {
-	moduleListNode *head;
-} moduleList;
+} moduleNode;
 
 extern const char *modules_dir;
 
-extern moduleList module_list;
+extern moduleNode modules_head;
 
-void initModuleList();
+void freeModuleList();
 
 bool loadModule(const char *filename);
 bool unloadModule(const char *filename);

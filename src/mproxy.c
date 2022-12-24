@@ -1,5 +1,4 @@
 #include "r_monitor.h"
-#include "m_module.h"
 #include "r_proxy.h"
 
 #include <errno.h>
@@ -12,21 +11,28 @@ typedef struct {
 	const char *modules_dir;
 
 	const char *inbound_address;
-	unsigned short inbound_port;
+	const char *inbound_port;
 	const char *outbound_address;
-	unsigned short outbound_port;
+	const char *outbound_port;
 } parameters;
 
 parameters params;
 
 bool parseArgs(int argc, char *argv[])
 {
-	if (argc != 2) {
-		printf("Usage: %s <dirname> [inaddr:]inport:[outaddr:]outport\n", argv[0]);
+	params.inbound_address = "0.0.0.0";
+	params.inbound_port = "0";
+	params.outbound_address = "127.0.0.1";
+
+	if (argc != 3) {
+		printf("Usage: %s -d <dirname> [-i [<inaddr>:]<inport>] -o "
+		       "[<outaddr>:]<outport>\n",
+		       argv[0]);
 		return false;
 	}
 
 	params.modules_dir = argv[1];
+	params.outbound_port = argv[2];
 
 	return true;
 }
@@ -37,17 +43,27 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	initModuleList();
+	printf("Loading MProxy...\n");
 
+	printf("Initializing Monitor\n");
 	if (!initMonitor(params.modules_dir)) {
 		return -1;
 	}
 
+	printf("Initializing Proxy\n");
 	if (!initProxy(params.inbound_address, params.inbound_port,
 	               params.outbound_address, params.outbound_port)) {
 		return -1;
 	}
 
+	printf("Running Proxy\n");
 	runProxy();
-	runMonitoring();
+
+	printf("Running Monitor\n");
+	runMonitor();
+
+	getchar();
+
+	destroyProxy();
+	destroyMonitor();
 }

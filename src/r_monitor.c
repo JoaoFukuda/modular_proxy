@@ -2,6 +2,7 @@
 
 #include "m_module.h"
 
+#include <dirent.h>
 #include <errno.h>
 #include <malloc.h>
 #include <pthread.h>
@@ -122,8 +123,35 @@ void *monitorLoop(void *ptr)
 	pthread_exit(ptr);
 }
 
+void scanDirectory(const char *dirname)
+{
+	printf("Scanning %s for modules\n", dirname);
+	DIR *dir = opendir(dirname);
+	if (!dir) {
+		return;
+	}
+
+	struct dirent *ent = NULL;
+	while ((ent = readdir(dir))) {
+		if (ent->d_name[0] == '.') {
+			continue;
+		}
+
+		// No support for modules in subdirectories yet
+		switch (ent->d_type) {
+			case DT_REG:
+				loadModule(ent->d_name);
+			default:
+				continue;
+		}
+	}
+
+	closedir(dir);
+}
+
 void runMonitor(void)
 {
+	scanDirectory(modules_dir);
 	pthread_create(&monitor_loop_thread, NULL, monitorLoop, NULL);
 }
 

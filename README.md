@@ -26,7 +26,6 @@ To compile a module, just use the `-shared` flag and output to a file with the e
 
 ## TODOs
 
-- Load modules on program start instead of only when events are fired through inotify;
-- Console instead of getchar() on main thread while running;
 - Improve the "closing the program" case;
-- Allow for multiple clients on the same proxy.
+- Allow for multiple clients on the same proxy;
+- Console instead of getchar() on main thread while running.

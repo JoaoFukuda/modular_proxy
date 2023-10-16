@@ -20,6 +20,7 @@ pthread_t proxy_loop_thread;
 bool initProxy(const char *inboundAddress, const char *inboundPort,
                const char *outboundAddress, const char *outboundPort)
 {
+	printf("Initializing Proxy: %s:%s -> %s:%s\n", inboundAddress, inboundPort, outboundAddress, outboundPort);
 	struct addrinfo hint;
 	struct addrinfo *inbound_res = NULL, *outbound_res = NULL;
 

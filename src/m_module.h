@@ -6,22 +6,22 @@
 #include <stdint.h>
 
 typedef struct {
-	size_t size;
-	const uint8_t *data;
+		size_t size;
+		const uint8_t *data;
 } buffer_t;
 
 typedef struct {
-	int priority;
-	char *filepath;
-	void *handler;
+		int priority;
+		char *filepath;
+		void *handler;
 
-	buffer_t (*inbound)(buffer_t);
-	buffer_t (*outbound)(buffer_t);
+		buffer_t (*inbound)(buffer_t);
+		buffer_t (*outbound)(buffer_t);
 } module;
 
 typedef struct aux {
-	module *module;
-	struct aux *next;
+		module *module;
+		struct aux *next;
 } moduleNode;
 
 extern const char *modules_dir;

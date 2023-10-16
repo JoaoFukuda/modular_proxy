@@ -58,6 +58,7 @@ bool handleEvent(void)
 
 bool initMonitor(const char *dirname)
 {
+	printf("Initializing monitor on '%s'\n", dirname);
 	int dirname_len = strlen(dirname);
 	modules_dir = (char *)calloc(sizeof(char), dirname_len + 1);
 	strncpy((char *)modules_dir, dirname, dirname_len);

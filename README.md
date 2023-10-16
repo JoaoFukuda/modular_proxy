@@ -12,14 +12,11 @@ cmake -B build/
 cmake --build build/
 ```
 
-To run, just execute the generated binary:
+To run, just execute the generated binary with the required arguments:
 
 ```bash
-./build/mproxy <modules_dir> <outbound_port>
+./build/mproxy -d <modules_dir> -o <outbound_port>
 ```
-
-Currently the proxy only binds to `0.0.0.0:0` and connects to `127.0.0.1:<outbound_port>`.
-First item on the TODO list is here to change that...
 
 ## Modules
 
@@ -29,7 +26,6 @@ To compile a module, just use the `-shared` flag and output to a file with the e
 
 ## TODOs
 
-- Properly parse arguments (and maybe rethink them);
 - Load modules on program start instead of only when events are fired through inotify;
 - Console instead of getchar() on main thread while running;
 - Improve the "closing the program" case;

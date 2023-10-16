@@ -129,7 +129,7 @@ bool unloadModule(const char *filename)
 	return true;
 }
 
-void freeModuleList()
+void freeModuleList(void)
 {
 	while (modules_head.next) {
 		moduleNode *aux = modules_head.next;

@@ -176,16 +176,16 @@ void *proxyLoop(void *ptr)
 	pthread_exit(ptr);
 }
 
-void runProxy()
+void runProxy(void)
 {
 	printf("Proxy running\n");
 
 	pthread_create(&proxy_loop_thread, NULL, proxyLoop, NULL);
 }
 
-void destroyProxy()
+void destroyProxy(void)
 {
-	close(listening_socket);
-
 	pthread_join(proxy_loop_thread, NULL);
+
+	close(listening_socket);
 }

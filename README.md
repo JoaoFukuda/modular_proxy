@@ -31,6 +31,6 @@ To compile a module, just use the `-shared` flag and output to a file with the e
 
 - Properly parse arguments (and maybe rethink them);
 - Load modules on program start instead of only when events are fired through inotify;
-- Put the monitor on a separate thread;
+- Console instead of getchar() on main thread while running;
 - Improve the "closing the program" case;
 - Allow for multiple clients on the same proxy.

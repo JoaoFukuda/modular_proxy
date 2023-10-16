@@ -18,7 +18,7 @@ int watch_fd;
 
 pthread_t monitor_loop_thread;
 
-bool handleEvent()
+bool handleEvent(void)
 {
 	uint8_t buffer[1024]
 	    __attribute__((aligned(__alignof__(struct inotify_event))));
@@ -44,6 +44,7 @@ bool handleEvent()
 		}
 
 		if (event->mask & IN_MOVED_TO || event->mask & IN_CREATE) {
+			sleep(1); // Sleep a bit so that when you read the module, it's not empty
 			loadModule(event->name);
 		}
 
@@ -120,14 +121,14 @@ void *monitorLoop(void *ptr)
 	pthread_exit(ptr);
 }
 
-void runMonitor()
+void runMonitor(void)
 {
 	pthread_create(&monitor_loop_thread, NULL, monitorLoop, NULL);
-	pthread_join(monitor_loop_thread, NULL);
 }
 
-void destroyMonitor()
+void destroyMonitor(void)
 {
+	pthread_join(monitor_loop_thread, NULL);
 	freeModuleList();
 
 	close(inotify_fd);

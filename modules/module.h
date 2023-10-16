@@ -9,7 +9,7 @@ typedef struct {
 	uint8_t *data;
 } buffer_t;
 
-int priority();
+int priority(void);
 
 buffer_t inbound(buffer_t buffer);
 buffer_t outbound(buffer_t buffer);

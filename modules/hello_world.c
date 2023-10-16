@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-int priority()
+int priority(void)
 {
 	return 10;
 }

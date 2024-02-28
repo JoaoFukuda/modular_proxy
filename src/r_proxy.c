@@ -12,6 +12,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+bool proxy_running;
 int listening_socket;
 struct sockaddr outbound_addr;
 socklen_t outbound_addrlen;
@@ -86,90 +87,93 @@ void *proxyLoop(void *ptr)
 {
 	printf("Running proxy loop in a separate thread\n");
 
-	int inbound_socket = accept(listening_socket, NULL, NULL);
-	if (inbound_socket == -1) {
-		fprintf(stderr, "Error: Could not accept on listening_socket\n");
-		pthread_exit(ptr);
-	}
-
-	int outbound_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (outbound_socket == -1) {
-		fprintf(stderr, "Error: Could not create outbound socket\n");
-		close(inbound_socket);
-		pthread_exit(ptr);
-	}
-
-	if (connect(outbound_socket, &outbound_addr, outbound_addrlen) == -1) {
-		fprintf(stderr, "Error: Could not connect to outbound address\n");
-		close(inbound_socket);
-		close(outbound_socket);
-		pthread_exit(ptr);
-	}
-
-	fd_set set;
-	FD_ZERO(&set);
-
-	char buf[4096];
-
-	while (true) {
-		FD_SET(inbound_socket, &set);
-		FD_SET(outbound_socket, &set);
-
-		select(MAX(inbound_socket, outbound_socket) + 1, &set, NULL, NULL, NULL);
-
-		if (FD_ISSET(inbound_socket, &set)) {
-			int data_len = recv(inbound_socket, buf, sizeof(buf), 0);
-			if (data_len == -1) {
-				fprintf(stderr, "Error: Could not read from inbound_socket, %s\n",
-				        strerror(errno));
-				pthread_exit(ptr);
-			}
-
-			if (data_len == 0) {
-				close(inbound_socket);
-				close(outbound_socket);
-				break;
-			}
-
-			buffer_t buffer;
-			buffer.size = data_len;
-			buffer.data = (const uint8_t *)buf;
-
-			buffer = runThroughOutbound(buffer);
-
-			data_len = send(outbound_socket, buffer.data, buffer.size, 0);
-			if (data_len == -1) {
-				fprintf(stderr, "Error: Could not send to outbound_socket, %s\n",
-				        strerror(errno));
-				pthread_exit(ptr);
-			}
+	proxy_running = true;
+	while (proxy_running) {
+		int inbound_socket = accept(listening_socket, NULL, NULL);
+		if (inbound_socket == -1) {
+			fprintf(stderr, "Error: Could not accept on listening_socket\n");
+			pthread_exit(ptr);
 		}
 
-		if (FD_ISSET(outbound_socket, &set)) {
-			int data_len = recv(outbound_socket, buf, sizeof(buf), 0);
-			if (data_len == -1) {
-				fprintf(stderr, "Error: Could not read from outbound_socket, %s\n",
-				        strerror(errno));
-				pthread_exit(ptr);
+		int outbound_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+		if (outbound_socket == -1) {
+			fprintf(stderr, "Error: Could not create outbound socket\n");
+			close(inbound_socket);
+			pthread_exit(ptr);
+		}
+
+		if (connect(outbound_socket, &outbound_addr, outbound_addrlen) == -1) {
+			fprintf(stderr, "Error: Could not connect to outbound address\n");
+			close(inbound_socket);
+			close(outbound_socket);
+			pthread_exit(ptr);
+		}
+
+		fd_set set;
+		FD_ZERO(&set);
+
+		char buf[4096];
+
+		while (true) {
+			FD_SET(inbound_socket, &set);
+			FD_SET(outbound_socket, &set);
+
+			select(MAX(inbound_socket, outbound_socket) + 1, &set, NULL, NULL, NULL);
+
+			if (FD_ISSET(inbound_socket, &set)) {
+				int data_len = recv(inbound_socket, buf, sizeof(buf), 0);
+				if (data_len == -1) {
+					fprintf(stderr, "Error: Could not read from inbound_socket, %s\n",
+					        strerror(errno));
+					pthread_exit(ptr);
+				}
+
+				if (data_len == 0) {
+					close(inbound_socket);
+					close(outbound_socket);
+					break;
+				}
+
+				buffer_t buffer;
+				buffer.size = data_len;
+				buffer.data = (const uint8_t *)buf;
+
+				buffer = runThroughOutbound(buffer);
+
+				data_len = send(outbound_socket, buffer.data, buffer.size, 0);
+				if (data_len == -1) {
+					fprintf(stderr, "Error: Could not send to outbound_socket, %s\n",
+					        strerror(errno));
+					pthread_exit(ptr);
+				}
 			}
 
-			if (data_len == 0) {
-				close(outbound_socket);
-				close(inbound_socket);
-				break;
-			}
+			if (FD_ISSET(outbound_socket, &set)) {
+				int data_len = recv(outbound_socket, buf, sizeof(buf), 0);
+				if (data_len == -1) {
+					fprintf(stderr, "Error: Could not read from outbound_socket, %s\n",
+					        strerror(errno));
+					pthread_exit(ptr);
+				}
 
-			buffer_t buffer;
-			buffer.size = data_len;
-			buffer.data = (const uint8_t *)buf;
+				if (data_len == 0) {
+					close(outbound_socket);
+					close(inbound_socket);
+					break;
+				}
 
-			buffer = runThroughInbound(buffer);
+				buffer_t buffer;
+				buffer.size = data_len;
+				buffer.data = (const uint8_t *)buf;
 
-			data_len = send(inbound_socket, buffer.data, buffer.size, 0);
-			if (data_len == -1) {
-				fprintf(stderr, "Error: Could not send to inbound_socket, %s\n",
-				        strerror(errno));
-				pthread_exit(ptr);
+				buffer = runThroughInbound(buffer);
+
+				data_len = send(inbound_socket, buffer.data, buffer.size, 0);
+				if (data_len == -1) {
+					fprintf(stderr, "Error: Could not send to inbound_socket, %s\n",
+					        strerror(errno));
+					pthread_exit(ptr);
+				}
 			}
 		}
 	}
@@ -186,6 +190,7 @@ void runProxy(void)
 
 void destroyProxy(void)
 {
+	proxy_running = false;
 	pthread_join(proxy_loop_thread, NULL);
 
 	close(listening_socket);

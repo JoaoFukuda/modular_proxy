@@ -17,6 +17,7 @@
 int inotify_fd;
 int watch_fd;
 
+bool monitor_running;
 pthread_t monitor_loop_thread;
 
 bool handleEvent(void)
@@ -87,35 +88,17 @@ bool initMonitor(const char *dirname)
 
 void *monitorLoop(void *ptr)
 {
-	bool running = true;
-
 	fd_set set;
 	FD_ZERO(&set);
 
-	while (running) {
-		FD_SET(STDIN_FILENO, &set);
+	monitor_running = true;
+	while (monitor_running) {
 		FD_SET(inotify_fd, &set);
-		select(MAX(STDIN_FILENO, inotify_fd) + 1, &set, NULL, NULL, NULL);
+		select(inotify_fd + 1, &set, NULL, NULL, NULL);
 
-		if (FD_ISSET(STDIN_FILENO, &set)) {
-			char *line = NULL;
-			size_t line_len = 0;
-
-			if (getline(&line, &line_len, stdin) == -1) {
-				free(line);
-				fprintf(stderr, "Error: %s\n", strerror(errno));
-				pthread_exit(ptr);
-			}
-
-			if (line[0] == 'q') {
-				running = false;
-			}
-
-			free(line);
-		}
-		else if (FD_ISSET(inotify_fd, &set)) {
+		if (FD_ISSET(inotify_fd, &set)) {
 			if (!handleEvent()) {
-				running = false;
+				monitor_running = false;
 			}
 		}
 	}
@@ -157,6 +140,7 @@ void runMonitor(void)
 
 void destroyMonitor(void)
 {
+	monitor_running = false;
 	pthread_join(monitor_loop_thread, NULL);
 	freeModuleList();
 

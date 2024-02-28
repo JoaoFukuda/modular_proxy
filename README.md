@@ -26,6 +26,6 @@ To compile a module, just use the `-shared` flag and output to a file with the e
 
 ## TODOs
 
-- Improve the "closing the program" case;
 - Allow for multiple clients on the same proxy;
+- Improve the "closing the program" case;
 - Console instead of getchar() on main thread while running.
